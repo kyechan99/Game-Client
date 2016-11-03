@@ -41,22 +41,38 @@ public class NetworkManager : MonoBehaviour
     {
         _instance = this;
     }
-    
+
     /**
      * @brief 서버에 접속 
      */
     public void Login()
     {
-        Logout();       // 이중 접속 방지
+        if (checkNetwork())
+        {
+            Logout();       // 이중 접속 방지
 
-        IPAddress serverIP = IPAddress.Parse(address);
-        int serverPort = Convert.ToInt32(port);
-        socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout, 10000);      // 송신 제한시간 10초
-        socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 10000);   // 수신 제한시간 10초
-        socket.Connect(new IPEndPoint(serverIP, serverPort));
+            IPAddress serverIP = IPAddress.Parse(address);
+            int serverPort = Convert.ToInt32(port);
+            socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout, 10000);      // 송신 제한시간 10초
+            socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 10000);   // 수신 제한시간 10초
 
-        StartCoroutine(PacketProc());
+            // 서버가 닫혀 있을것을 대비하여 예외처리
+            try
+            {
+                socket.Connect(new IPEndPoint(serverIP, serverPort));
+            }
+            catch (SocketException err)
+            {
+                Debug.Log("서버가 닫혀있습니다.");
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("ERROR 개반자에게 문의");
+            }
+
+            StartCoroutine(PacketProc());
+        }
     }
 
     /**
@@ -84,7 +100,7 @@ public class NetworkManager : MonoBehaviour
      * @param nickName 이름
      * @param isPlayer 나 인가 아닌가
      */
-    public void CreateUser(Vector3 pos ,string nickName, bool isPlayer)
+    public void CreateUser(Vector3 pos, string nickName, bool isPlayer)
     {
         GameObject obj = Instantiate(playerPrefs, pos, Quaternion.identity) as GameObject;
         User player = obj.GetComponent<User>();
@@ -106,11 +122,11 @@ public class NetworkManager : MonoBehaviour
             if (socket != null && socket.Connected)
             {
                 byte[] buf = new byte[4096];
-                
+
                 Buffer.BlockCopy(ShortToByte(Encoding.UTF8.GetBytes(txt).Length + 2), 0, buf, 0, 2);
-                
+
                 Buffer.BlockCopy(Encoding.UTF8.GetBytes(txt), 0, buf, 2, Encoding.UTF8.GetBytes(txt).Length);
-                
+
                 socket.Send(buf, Encoding.UTF8.GetBytes(txt).Length + 2, 0);
             }
         }
@@ -209,6 +225,66 @@ public class NetworkManager : MonoBehaviour
             socket.Close();
         }
         StopCoroutine(PacketProc());
+    }
+
+    /**
+     * @brief 인터넷 연결되어 있는지 확인
+     */
+    public bool checkNetwork()
+    {
+        string HtmlText = GetHtmlFromUri("http://google.com");
+        if (HtmlText == "")
+        {
+            // 연결 실패
+            Debug.Log("인터넷 연결 실패");
+        }
+        else if (!HtmlText.Contains("schema.org/WebPage"))
+        {
+            // 비정상적인 루트일때
+            Debug.Log("인터넷 연결 실패");
+        }
+        else
+        {
+            // 성공적인 연결
+            Debug.Log("인터넷 연결 성공");
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @brief html 받아오기
+     * @param resource url
+     */
+    public string GetHtmlFromUri(string resource)
+    {
+        string html = string.Empty;
+        HttpWebRequest req = (HttpWebRequest)WebRequest.Create(resource);
+        try
+        {
+            using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
+            {
+                bool isSuccess = (int)resp.StatusCode < 299 && (int)resp.StatusCode >= 200;
+                if (isSuccess)
+                {
+                    using (StreamReader reader = new StreamReader(resp.GetResponseStream()))
+                    {
+                        char[] cs = new char[80];
+                        reader.Read(cs, 0, cs.Length);
+                        foreach (char ch in cs)
+                        {
+                            html += ch;
+                        }
+                    }
+                }
+            }
+        }
+        catch
+        {
+            return "";
+        }
+        return html;
     }
 
     /**
