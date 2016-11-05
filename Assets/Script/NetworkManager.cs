@@ -18,7 +18,7 @@ using UnityEngine.UI;
 public class NetworkManager : MonoBehaviour
 {
     static Socket socket = null;
-    string address = "192.168.0.5";   // 주소, 서버 주소와 같게 할 것
+    string address = "175.123.65.167";   // 주소, 서버 주소와 같게 할 것
     int port = 10000;               // 포트 번호, 서버포트와 같게 할 것
     byte[] buf = new byte[4096];
     int recvLen = 0;
@@ -96,17 +96,19 @@ public class NetworkManager : MonoBehaviour
 
     /**
      * @brief 접속 종료 
-     * @param pos 생성 위치
      * @param nickName 이름
+     * @param pos 생성 위치
      * @param isPlayer 나 인가 아닌가
      */
-    public void CreateUser(Vector3 pos, string nickName, bool isPlayer)
+    public void CreateUser(string nickName, Vector3 pos, MOVE_CONTROL moveC, MOVE_CONTROL seeDir, bool isPlayer)
     {
         GameObject obj = Instantiate(playerPrefs, pos, Quaternion.identity) as GameObject;
         User player = obj.GetComponent<User>();
 
         player.nickName.text = nickName;
         player.isPlayer = isPlayer;
+        player.myMove = moveC;
+        player.setDirection(seeDir);
 
         v_user.Add(player);
     }
@@ -189,11 +191,12 @@ public class NetworkManager : MonoBehaviour
         }
         else if (txt[0].Equals("USER"))
         {
-            CreateUser(new Vector3(float.Parse(txt[2]), float.Parse(txt[3]), 0), txt[1], false);
+            /* nick, posX, posY, move_control, direction */
+            CreateUser(txt[1], new Vector3(float.Parse(txt[2]), float.Parse(txt[3]), 0), (MOVE_CONTROL)int.Parse(txt[4]), (MOVE_CONTROL)int.Parse(txt[5]), false);
         }
         else if (txt[0].Equals("ADDUSER"))
         {
-            CreateUser(new Vector3(UnityEngine.Random.RandomRange(-3, 3), UnityEngine.Random.RandomRange(-2, 2), 0), nickName.text, true);
+            CreateUser(nickName.text, new Vector3(UnityEngine.Random.RandomRange(-3, 3), UnityEngine.Random.RandomRange(-2, 2), 0), MOVE_CONTROL.STOP, MOVE_CONTROL.DOWN, true);
         }
         else if (txt[0].Equals("CHAT"))
         {
@@ -202,7 +205,9 @@ public class NetworkManager : MonoBehaviour
         }
         else if (txt[0].Equals("MOVE"))
         {
-
+            int idx = int.Parse(txt[1]);
+            v_user[idx].transform.position = new Vector3(float.Parse(txt[2]), float.Parse(txt[3]), 0f);
+            v_user[idx].myMove = (MOVE_CONTROL)int.Parse(txt[4]);
         }
         else if (txt[0].Equals("LOGOUT"))
         {
@@ -233,7 +238,7 @@ public class NetworkManager : MonoBehaviour
     public bool checkNetwork()
     {
         string HtmlText = GetHtmlFromUri("http://google.com");
-        if (HtmlText == "")
+        if (HtmlText.Equals(""))
         {
             // 연결 실패
             Debug.Log("인터넷 연결 실패");
@@ -246,7 +251,7 @@ public class NetworkManager : MonoBehaviour
         else
         {
             // 성공적인 연결
-            Debug.Log("인터넷 연결 성공");
+            Debug.Log("인터넷 연결 되있음");
             return true;
         }
 
