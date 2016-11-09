@@ -18,10 +18,17 @@ using UnityEngine.UI;
 public class NetworkManager : MonoBehaviour
 {
     static Socket socket = null;
-    string address = "175.123.65.167";   // 주소, 서버 주소와 같게 할 것
+    string address = "121.186.97.52";   // 주소, 서버 주소와 같게 할 것
     int port = 10000;               // 포트 번호, 서버포트와 같게 할 것
     byte[] buf = new byte[4096];
     int recvLen = 0;
+
+    [SerializeField]
+    private GameObject loginWindow;
+    [SerializeField]
+    private GameObject nowLoadingWindow;
+    [SerializeField]
+    private GameObject selectRoomWindow;
 
     static NetworkManager _instance;
     public static NetworkManager getInstance
@@ -32,7 +39,8 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
-    public InputField nickName;
+    [SerializeField]
+    InputField nickName;
     List<User> v_user = new List<User>();
 
     public GameObject playerPrefs;
@@ -47,6 +55,8 @@ public class NetworkManager : MonoBehaviour
      */
     public void Login()
     {
+        nowLoadingWindow.SetActive(true);
+
         if (checkNetwork())
         {
             Logout();       // 이중 접속 방지
@@ -61,17 +71,28 @@ public class NetworkManager : MonoBehaviour
             try
             {
                 socket.Connect(new IPEndPoint(serverIP, serverPort));
+                StartCoroutine(PacketProc());
+                loginWindow.SetActive(false);
+                selectRoomWindow.SetActive(true);
+                nowLoadingWindow.SetActive(false);
             }
             catch (SocketException err)
             {
                 Debug.Log("서버가 닫혀있습니다.");
+                Debug.Log("ERROR : " + err.ToString());
+                Logout();
             }
             catch (Exception ex)
             {
                 Debug.Log("ERROR 개반자에게 문의");
+                Logout();
             }
-
-            StartCoroutine(PacketProc());
+        }
+        else
+        {
+            Debug.Log("FFF");
+            loginWindow.SetActive(true);
+            nowLoadingWindow.SetActive(false);
         }
     }
 
@@ -83,6 +104,8 @@ public class NetworkManager : MonoBehaviour
         if (socket != null && socket.Connected)
             socket.Close();
         StopCoroutine(PacketProc());
+
+        loginWindow.SetActive(true);
     }
 
     /**
