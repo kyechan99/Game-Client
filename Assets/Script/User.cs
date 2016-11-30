@@ -34,7 +34,7 @@ public class User : MonoBehaviour
 
             if (myMove != beforeMove)
             {
-                NetworkManager.getInstance.SendMsg(string.Format("MOVE:{0}:{1}:{2}", transform.position.x, transform.position.y, (int)myMove));
+                GM.NetworkManager.getInstance.SendMsg(string.Format("MOVE:{0}:{1}:{2}", transform.position.x, transform.position.y, (int)myMove));
                 beforeMove = myMove;
             }
         }
