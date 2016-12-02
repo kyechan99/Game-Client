@@ -14,9 +14,18 @@ namespace GM
         GameObject roomPrefabBT;                // 방 찾기시 생성될 방 버튼들
         [SerializeField]
         GameObject foundRoomList;               // 발견된 방 리스트들
-        
+        [SerializeField]
+        GameObject checkPWpop;                  // 비밀번호 체크 팝업
+
+        //[HideInInspector]
+        public string roomPW;
+        //[HideInInspector]
+        public string inputPW;
+
         void Start()
         {
+            roomPW = "";
+            inputPW = "";
             NetworkManager.getInstance._roomGM = this;
         }
 
@@ -53,9 +62,56 @@ namespace GM
             GameObject go = Instantiate(roomPrefabBT) as GameObject;
             go.GetComponentInChildren<UnityEngine.UI.Text>().text = string.Format("{0}:{1}:{2}", roomIdx, roomName, roomPW);
 
-            //AddListener(go.GetComponent<UnityEngine.UI.Button>(), i);
+            AddListener(go.GetComponent<UnityEngine.UI.Button>(), roomPW);
             go.transform.SetParent(foundRoomList.transform);
             go.transform.localScale = Vector2.one;
+        }
+
+        void AddListener(UnityEngine.UI.Button b, string roomPW)
+        {
+            b.onClick.AddListener(() => checkRoomPW(roomPW));
+        }
+
+        /**
+         * @brief 방 암호 확인
+         * @param roomPW 방 암호
+         */
+        public void checkRoomPW(string roomPW)
+        {
+            // 암호가 존재하는 방
+            if (!roomPW.Equals(""))
+            {
+                checkPWpop.SetActive(true);
+                this.roomPW = roomPW;
+            }
+            else
+            {
+                intoRoom();
+            }
+        }
+
+        /**
+         * @brief 입력한 비밀번호 확인
+         * @param inputPW 입력한 비밀번호
+         */
+        public void checkPWCorrect(UnityEngine.UI.Text inputPW)
+        {
+            // 방 암호와 내가 입력한 암호가 일치 할 때
+            if (this.roomPW.Equals(inputPW.text))
+            {
+                this.inputPW = "";
+                this.roomPW = "";
+                intoRoom();
+            }
+        }
+
+        /**
+         * @brief 입력하는 비밀번호 변경
+         * @param inputPW 입력한 비밀번호
+         */
+        public void setPassword(string inputPW)
+        {
+            this.inputPW = inputPW;
         }
 
         /**

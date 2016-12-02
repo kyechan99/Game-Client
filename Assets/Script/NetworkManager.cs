@@ -20,24 +20,18 @@ namespace GM
     public class NetworkManager : MonoBehaviour
     {
         static Socket socket = null;
-        string address = "127.0.0.1";   // 주소, 서버 주소와 같게 할 것
+        public string address = "127.0.0.1";   // 주소, 서버 주소와 같게 할 것
         int port = 10000;               // 포트 번호, 서버포트와 같게 할 것
         byte[] buf = new byte[4096];
         int recvLen = 0;
-
-        [SerializeField]
-        private GameObject loginWindow;
-        [SerializeField]
-        private GameObject nowLoadingWindow;
-        [SerializeField]
-        private GameObject selectRoomWindow;
         
-        [SerializeField]
-        InputField nickName;
+
+        public GameObject nowLoadingWindow;
+        
+        public string nickName;
         List<User> v_user = new List<User>();
 
         public GameObject playerPrefs;
-        public GameObject chatPanel;
 
         public RoomManager _roomGM;
 
@@ -50,8 +44,9 @@ namespace GM
             }
         }
 
-        void Start()
+        void Awake()
         {
+            DontDestroyOnLoad(this);
             _instance = this;
         }
 
@@ -77,26 +72,23 @@ namespace GM
                 {
                     socket.Connect(new IPEndPoint(serverIP, serverPort));
                     StartCoroutine("PacketProc");
-                    loginWindow.SetActive(false);
-                    selectRoomWindow.SetActive(true);
-                    nowLoadingWindow.SetActive(false);
+
+                    nowLoadingWindow.SetActive(true);
+                    UnityEngine.SceneManagement.SceneManager.LoadScene("Main");
                 }
                 catch (SocketException err)
                 {
-                    Debug.Log("서버가 닫혀있습니다.");
-                    Debug.Log("ERROR : " + err.ToString());
+                    Debug.Log("서버가 닫혀있습니다. : " + err.ToString());
                     Logout();
                 }
                 catch (Exception ex)
                 {
-                    Debug.Log("ERROR 개반자에게 문의");
+                    Debug.Log("ERROR 개반자에게 문의 : " + ex.ToString());
                     Logout();
                 }
             }
             else
             {
-                Debug.Log("FFF");
-                loginWindow.SetActive(true);
                 nowLoadingWindow.SetActive(false);
             }
         }
@@ -109,8 +101,6 @@ namespace GM
             if (socket != null && socket.Connected)
                 socket.Close();
             StopCoroutine("PacketProc");
-
-            loginWindow.SetActive(true);
         }
 
         /**
@@ -173,6 +163,7 @@ namespace GM
         {
             while (true)
             {
+                if (socket.Connected)
                 if (socket.Available > 0)
                 {
                     byte[] buf = new byte[4096];
@@ -215,8 +206,7 @@ namespace GM
             if (txt[0].Equals("CONNECT"))
             {
                 Debug.Log("Connected.");
-                SendMsg(string.Format("LOGIN:{0}", nickName.text));
-                chatPanel.SetActive(true);
+                SendMsg(string.Format("LOGIN:{0}", nickName));
             }
             else if (txt[0].Equals("USER"))
             {
@@ -225,7 +215,7 @@ namespace GM
             }
             else if (txt[0].Equals("ADDUSER"))
             {
-                CreateUser(nickName.text, new Vector3(UnityEngine.Random.RandomRange(-3, 3), UnityEngine.Random.RandomRange(-2, 2), 0), MOVE_CONTROL.STOP, MOVE_CONTROL.DOWN, true);
+                CreateUser(nickName, new Vector3(UnityEngine.Random.Range(-3, 4), UnityEngine.Random.Range(-2, 3), 0), MOVE_CONTROL.STOP, MOVE_CONTROL.DOWN, true);
             }
             else if (txt[0].Equals("CHAT"))
             {
@@ -265,9 +255,22 @@ namespace GM
             StopCoroutine("PacketProc");
         }
 
+        /**
+         * @brief 게임내 로그아웃, 접속 종료
+         */
         public void LogOutBT()
         {
+            nowLoadingWindow.SetActive(true);
             OnDestroy();
+            UnityEngine.SceneManagement.SceneManager.LoadScene("Intro");
+        }
+
+        /**
+         * @brief 유저 이름 변경
+         */
+        public void setNickName(string nickName)
+        {
+            this.nickName = nickName;
         }
 
         /**
