@@ -37,7 +37,7 @@ namespace GM
         List<User> v_user = new List<User>();
 
         public GameObject playerPrefs;
-
+        public GameObject chatPanel;
 
         public RoomManager _roomGM;
 
@@ -71,12 +71,12 @@ namespace GM
                 socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout, 10000);      // 송신 제한시간 10초
                 socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 10000);   // 수신 제한시간 10초
-
+               
                 // 서버가 닫혀 있을것을 대비하여 예외처리
                 try
                 {
                     socket.Connect(new IPEndPoint(serverIP, serverPort));
-                    StartCoroutine(PacketProc());
+                    StartCoroutine("PacketProc");
                     loginWindow.SetActive(false);
                     selectRoomWindow.SetActive(true);
                     nowLoadingWindow.SetActive(false);
@@ -108,7 +108,7 @@ namespace GM
         {
             if (socket != null && socket.Connected)
                 socket.Close();
-            StopCoroutine(PacketProc());
+            StopCoroutine("PacketProc");
 
             loginWindow.SetActive(true);
         }
@@ -216,6 +216,7 @@ namespace GM
             {
                 Debug.Log("Connected.");
                 SendMsg(string.Format("LOGIN:{0}", nickName.text));
+                chatPanel.SetActive(true);
             }
             else if (txt[0].Equals("USER"))
             {
@@ -261,7 +262,12 @@ namespace GM
                 Thread.Sleep(500);
                 socket.Close();
             }
-            StopCoroutine(PacketProc());
+            StopCoroutine("PacketProc");
+        }
+
+        public void LogOutBT()
+        {
+            OnDestroy();
         }
 
         /**
