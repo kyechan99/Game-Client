@@ -8,6 +8,7 @@ using System.Threading;
 using System.IO;
 using System;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 /** ********** 사전 세팅 *****************************************************************
   * Player Settings > Resolution and Presentation > Run in Background > true
@@ -24,10 +25,10 @@ namespace GM
         int port = 10000;               // 포트 번호, 서버포트와 같게 할 것
         byte[] buf = new byte[4096];
         int recvLen = 0;
-        
+        public uint myRoom = 0;
 
         public GameObject nowLoadingWindow;
-        
+
         public string nickName;
         List<User> v_user = new List<User>();
 
@@ -66,7 +67,7 @@ namespace GM
                 socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout, 10000);      // 송신 제한시간 10초
                 socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 10000);   // 수신 제한시간 10초
-               
+
                 // 서버가 닫혀 있을것을 대비하여 예외처리
                 try
                 {
@@ -74,7 +75,7 @@ namespace GM
                     StartCoroutine("PacketProc");
 
                     nowLoadingWindow.SetActive(true);
-                    UnityEngine.SceneManagement.SceneManager.LoadScene("Main");
+                    SceneManager.LoadScene("Main");
                 }
                 catch (SocketException err)
                 {
@@ -164,33 +165,33 @@ namespace GM
             while (true)
             {
                 if (socket.Connected)
-                if (socket.Available > 0)
-                {
-                    byte[] buf = new byte[4096];
-                    int nRead = socket.Receive(buf, socket.Available, 0);
-
-                    if (nRead > 0)
+                    if (socket.Available > 0)
                     {
-                        Buffer.BlockCopy(buf, 0, this.buf, recvLen, nRead);
-                        recvLen += nRead;
+                        byte[] buf = new byte[4096];
+                        int nRead = socket.Receive(buf, socket.Available, 0);
 
-                        while (true)
+                        if (nRead > 0)
                         {
-                            int len = BitConverter.ToInt16(this.buf, 0);
+                            Buffer.BlockCopy(buf, 0, this.buf, recvLen, nRead);
+                            recvLen += nRead;
 
-                            if (len > 0 && recvLen >= len)
+                            while (true)
                             {
-                                ParsePacket(len);
-                                recvLen -= len;
-                                Buffer.BlockCopy(this.buf, len, this.buf, 0, recvLen);
-                            }
-                            else
-                            {
-                                break;
+                                int len = BitConverter.ToInt16(this.buf, 0);
+
+                                if (len > 0 && recvLen >= len)
+                                {
+                                    ParsePacket(len);
+                                    recvLen -= len;
+                                    Buffer.BlockCopy(this.buf, len, this.buf, 0, recvLen);
+                                }
+                                else
+                                {
+                                    break;
+                                }
                             }
                         }
                     }
-                }
                 yield return null;
             }
         }
@@ -228,16 +229,36 @@ namespace GM
                 v_user[idx].transform.position = new Vector3(float.Parse(txt[2]), float.Parse(txt[3]), 0f);
                 v_user[idx].myMove = (MOVE_CONTROL)int.Parse(txt[4]);
             }
+            else if (txt[0].Equals("FOUND_ROOM"))
+            {
+                _roomGM.makeGate(txt[1], txt[2], txt[3], txt[4], txt[5]);
+            }
+            else if (txt[0].Equals("ENTER_ROOM"))
+            {
+                if (txt[1].Equals("IN"))
+                {
+                    myRoom = uint.Parse(_roomGM.roomIdx);
+                    _roomGM.roomIdx = "";
+                    Debug.Log("IN ROOM");
+                    SceneManager.LoadScene("Room");
+                }
+                else if (txt[1].Equals("LIMIT"))
+                {
+                    myRoom = 0;
+                    _roomGM.roomIdx = "";
+                }
+                else if (txt[1].Equals("MISS"))
+                {
+                    myRoom = 0;
+                    _roomGM.roomIdx = "";
+                }
+            }
             else if (txt[0].Equals("LOGOUT"))
             {
                 int idx = int.Parse(txt[1]);
 
                 Destroy(v_user[idx].gameObject);
                 v_user.RemoveAt(idx);
-            }
-            else if (txt[0].Equals("FOUND_ROOM"))
-            {
-                _roomGM.makeGate(txt[1], txt[2], txt[3]);
             }
         }
 
@@ -248,6 +269,8 @@ namespace GM
         {
             if (socket != null && socket.Connected)
             {
+                if (myRoom != 0)
+                    SendMsg(string.Format("OUT_ROOM:{0}", myRoom));
                 SendMsg("DISCONNECT");
                 Thread.Sleep(500);
                 socket.Close();
@@ -262,7 +285,7 @@ namespace GM
         {
             nowLoadingWindow.SetActive(true);
             OnDestroy();
-            UnityEngine.SceneManagement.SceneManager.LoadScene("Intro");
+            SceneManager.LoadScene("Intro");
         }
 
         /**

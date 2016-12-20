@@ -9,6 +9,8 @@ namespace GM
         UnityEngine.UI.Text roomNameTxt;        // 방 생성시 이름
         [SerializeField]
         UnityEngine.UI.Text roomPWTxt;          // 방 비밀번호 이름
+        [SerializeField]
+        UnityEngine.UI.Text roomLimitMem;          // 방 비밀번호 이름
 
         [SerializeField]
         GameObject roomPrefabBT;                // 방 찾기시 생성될 방 버튼들
@@ -21,6 +23,8 @@ namespace GM
         public string roomPW;
         //[HideInInspector]
         public string inputPW;
+        //[HideInInspector]
+        public string roomIdx;
 
         void Start()
         {
@@ -34,7 +38,12 @@ namespace GM
          */
         public void createRoom()
         {
-            NetworkManager.getInstance.SendMsg(string.Format("CREATE_ROOM:{0}:{1}", roomNameTxt.text, roomPWTxt.text));
+            // 인원수 최대 제한
+            //if (System.Convert.ToInt32(roomLimitMem.text) > 4)
+            //    roomLimitMem.text = 4 + "";
+            Debug.Log(roomLimitMem.text);
+            NetworkManager.getInstance.SendMsg(string.Format("CREATE_ROOM:{0}:{1}:{2}", roomNameTxt.text, roomPWTxt.text, roomLimitMem.text));
+            UnityEngine.SceneManagement.SceneManager.LoadScene("Room");
         }
 
         /**
@@ -42,8 +51,7 @@ namespace GM
          */
         public void intoRoom()
         {
-            Debug.Log("DDD");
-            NetworkManager.getInstance.SendMsg("INTO_ROOM");
+            NetworkManager.getInstance.SendMsg(string.Format("INTO_ROOM:{0}", roomIdx));
         }
 
         /**
@@ -57,35 +65,37 @@ namespace GM
         /**
          * @brief 방 입장 게이트 생성
          */
-        public void makeGate(string roomIdx, string roomName, string roomPW)
+        public void makeGate(string roomIdx, string roomName, string roomPW, string nowMem, string limitMem)
         {
             GameObject go = Instantiate(roomPrefabBT) as GameObject;
-            go.GetComponentInChildren<UnityEngine.UI.Text>().text = string.Format("{0}:{1}:{2}", roomIdx, roomName, roomPW);
+            go.GetComponentInChildren<UnityEngine.UI.Text>().text = string.Format("{0}:{1}:{2}  {3}/{4}", roomIdx, roomName, roomPW, nowMem, limitMem);
 
-            AddListener(go.GetComponent<UnityEngine.UI.Button>(), roomPW);
+            AddListener(go.GetComponent<UnityEngine.UI.Button>(), roomIdx, roomPW);
             go.transform.SetParent(foundRoomList.transform);
             go.transform.localScale = Vector2.one;
         }
 
-        void AddListener(UnityEngine.UI.Button b, string roomPW)
+        void AddListener(UnityEngine.UI.Button b, string roomIdx, string roomPW)
         {
-            b.onClick.AddListener(() => checkRoomPW(roomPW));
+            b.onClick.AddListener(() => checkRoomPW(roomIdx, roomPW));
         }
 
         /**
          * @brief 방 암호 확인
          * @param roomPW 방 암호
          */
-        public void checkRoomPW(string roomPW)
+        public void checkRoomPW(string roomIdx, string roomPW)
         {
             // 암호가 존재하는 방
             if (!roomPW.Equals(""))
             {
-                checkPWpop.SetActive(true);
+                this.roomIdx = roomIdx;
                 this.roomPW = roomPW;
+                checkPWpop.SetActive(true);
             }
             else
             {
+                this.roomIdx = roomIdx;
                 intoRoom();
             }
         }
