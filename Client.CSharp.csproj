@@ -65,6 +65,7 @@
   <ItemGroup>
     <Compile Include="Assets\Script\MainManager.cs" />
     <Compile Include="Assets\Script\NetworkManager.cs" />
+    <Compile Include="Assets\Script\ReadyManager.cs" />
     <Compile Include="Assets\Script\RoomManager.cs" />
     <Compile Include="Assets\Script\User.cs" />
   </ItemGroup>

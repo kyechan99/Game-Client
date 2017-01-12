@@ -43,7 +43,6 @@ namespace GM
             //    roomLimitMem.text = 4 + "";
             Debug.Log(roomLimitMem.text);
             NetworkManager.getInstance.SendMsg(string.Format("CREATE_ROOM:{0}:{1}:{2}", roomNameTxt.text, roomPWTxt.text, roomLimitMem.text));
-            UnityEngine.SceneManagement.SceneManager.LoadScene("Room");
         }
 
         /**

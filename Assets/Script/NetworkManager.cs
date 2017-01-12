@@ -25,7 +25,7 @@ namespace GM
         int port = 10000;               // 포트 번호, 서버포트와 같게 할 것
         byte[] buf = new byte[4096];
         int recvLen = 0;
-        public uint myRoom = 0;
+        public int myRoom = 0;
 
         public GameObject nowLoadingWindow;
 
@@ -216,7 +216,7 @@ namespace GM
             }
             else if (txt[0].Equals("ADDUSER"))
             {
-                CreateUser(nickName, new Vector3(UnityEngine.Random.Range(-3, 4), UnityEngine.Random.Range(-2, 3), 0), MOVE_CONTROL.STOP, MOVE_CONTROL.DOWN, true);
+                CreateUser(nickName, Vector3.zero, MOVE_CONTROL.STOP, MOVE_CONTROL.DOWN, true);
             }
             else if (txt[0].Equals("CHAT"))
             {
@@ -229,6 +229,17 @@ namespace GM
                 v_user[idx].transform.position = new Vector3(float.Parse(txt[2]), float.Parse(txt[3]), 0f);
                 v_user[idx].myMove = (MOVE_CONTROL)int.Parse(txt[4]);
             }
+            else if (txt[0].Equals("CHANGE_ROOM"))
+            {
+                myRoom = int.Parse(txt[1]);
+
+                // 광장이 아닐때
+                if (!myRoom.Equals(0))
+                {
+                    initRoom();
+                    SceneManager.LoadScene("Room");
+                }
+            }
             else if (txt[0].Equals("FOUND_ROOM"))
             {
                 _roomGM.makeGate(txt[1], txt[2], txt[3], txt[4], txt[5]);
@@ -237,9 +248,12 @@ namespace GM
             {
                 if (txt[1].Equals("IN"))
                 {
-                    myRoom = uint.Parse(_roomGM.roomIdx);
+                    myRoom = int.Parse(_roomGM.roomIdx);
                     _roomGM.roomIdx = "";
-                    Debug.Log("IN ROOM");
+
+                    // 방을 변경
+                    SendMsg(string.Format("CHANGE_ROOM:{0}", myRoom));
+                    initRoom();
                     SceneManager.LoadScene("Room");
                 }
                 else if (txt[1].Equals("LIMIT"))
@@ -269,6 +283,7 @@ namespace GM
         {
             if (socket != null && socket.Connected)
             {
+                // 광장이 아니였을 때
                 if (myRoom != 0)
                     SendMsg(string.Format("OUT_ROOM:{0}", myRoom));
                 SendMsg("DISCONNECT");
@@ -276,6 +291,25 @@ namespace GM
                 socket.Close();
             }
             StopCoroutine("PacketProc");
+        }
+
+        /**
+         * @brief 방을 변경시킬때 초기화 해줘야 되는 부분
+         */
+        public void initRoom()
+        {
+            v_user.Clear();
+        }
+
+        /**
+         * @brief 방을 바뀌게 하였을때 호출할것 ( 바뀔 방의 정보를 가져와 새로고침하게 함 )
+         */
+        [Obsolete("changeRoom()는 씬 Awake()에서 SendMsg('LOGIN') 호출하는 형태로 변경됨 ( 사용 비추 )", true)]
+        public void changeRoom()
+        {
+            v_user.Clear();
+
+            SendMsg(string.Format("LOGIN:{0}", nickName));
         }
 
         /**
